@@ -563,7 +563,7 @@ class TemplateRenderer(object):
                     ctx.parent["environment"], ctx.parent["location"]
                 )
             device = "{}.{}.blade-group.net".format(device, location)
-        if recursion_detected(inspect.current   frame(), {}):
+        if recursion_detected(inspect.currentframe(), {}):
             # When recursing, don't cache results
             return self._uncached_lookup(ctx, device, namespace, key)
         return self._cached_lookup(LruCacheIgnore(ctx), device, namespace, key)
