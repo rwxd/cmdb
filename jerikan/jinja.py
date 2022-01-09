@@ -14,9 +14,14 @@ import inspect
 from datetime import timedelta, datetime, time
 import ansible.plugins.filter.core
 import ansible_collections.ansible.netcommon.plugins.filter.ipaddr
-from jinja2 import Environment, FileSystemLoader, \
-    StrictUndefined, Undefined, \
-    contextfunction, contextfilter
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    StrictUndefined,
+    Undefined,
+    contextfunction,
+    contextfilter,
+)
 from jinja2 import TemplateRuntimeError
 from jinja2.ext import Extension
 from jinja2.nodes import CallBlock
@@ -28,23 +33,24 @@ from .utils import TimeIt, wait_for
 logger = logging.getLogger(__name__)
 _registered_jinjafilters = []
 _imported_jinjafilters = [
-    (ansible.plugins.filter.core,
-     ["regex_search",
-      "regex_replace",
-      "to_json",
-      "to_yaml",
-      "to_nice_yaml",
-      "b64decode",
-      ("get_hash", "hash"),
-      ("get_encrypted_password", "password_hash")]),
-    (ansible_collections.ansible.netcommon.plugins.filter.ipaddr,
-     ["ipaddr",
-      "ipmath",
-      "ipsubnet",
-      "ipv4",
-      "ipv6",
-      "cidr_merge",
-      "hwaddr"])]
+    (
+        ansible.plugins.filter.core,
+        [
+            "regex_search",
+            "regex_replace",
+            "to_json",
+            "to_yaml",
+            "to_nice_yaml",
+            "b64decode",
+            ("get_hash", "hash"),
+            ("get_encrypted_password", "password_hash"),
+        ],
+    ),
+    (
+        ansible_collections.ansible.netcommon.plugins.filter.ipaddr,
+        ["ipaddr", "ipmath", "ipsubnet", "ipv4", "ipv6", "cidr_merge", "hwaddr"],
+    ),
+]
 
 
 def jinjafilter(f):
@@ -68,6 +74,7 @@ def ipv(address):
     net = netaddr.IPNetwork(address)
     return net.version
 
+
 @jinjafilter
 @contextfilter
 def ipv4toipv6(ctx, ipv4_to_convert, base_v6=None):
@@ -81,14 +88,15 @@ def ipv4toipv6(ctx, ipv4_to_convert, base_v6=None):
     '2001:db8::101:101/120'
     """
     if base_v6 is None:
-        base_v6 = ctx.call(ctx.parent["lookup"],
-                           "topology", "base-public-6")
+        base_v6 = ctx.call(ctx.parent["lookup"], "topology", "base-public-6")
     base_v6 = ipaddress.ip_network(base_v6)
     assert base_v6.prefixlen == 96, "base-public-6 should be a /96"
     if "/" in ipv4_to_convert:
         ipv4_to_convert = ipaddress.ip_interface(ipv4_to_convert)
-        return (f"{base_v6[int(ipv4_to_convert)]}/"
-                f"{ipv4_to_convert.network.prefixlen + 96}")
+        return (
+            f"{base_v6[int(ipv4_to_convert)]}/"
+            f"{ipv4_to_convert.network.prefixlen + 96}"
+        )
     else:
         ipv4_to_convert = ipaddress.ip_address(ipv4_to_convert)
         return f"{base_v6[int(ipv4_to_convert)]}"
@@ -158,10 +166,10 @@ def ipoffset(base, offset):
     base = netaddr.IPNetwork(base, flags=netaddr.NOHOST)
     offset = netaddr.IPNetwork(offset)
     result = base[offset.ip]
-    return "{}/{}".format(str(result),
-                          base.prefixlen
-                          if offset.size == 1
-                          else offset.prefixlen)
+    return "{}/{}".format(
+        str(result), base.prefixlen if offset.size == 1 else offset.prefixlen
+    )
+
 
 @jinjafilter
 def dhcp_option119(fqdn):
@@ -172,9 +180,10 @@ def dhcp_option119(fqdn):
     """
     result = ""
     for component in fqdn.split("."):
-       result += "{:02x}{}".format(len(component), component.encode('ascii').hex())
+        result += "{:02x}{}".format(len(component), component.encode('ascii').hex())
     result += "00"
     return result
+
 
 @jinjafilter
 def torange(arg):
@@ -270,9 +279,7 @@ def bgpq3(targetos, cache, name, *more):
     wait_for(irrd_server, 43)
     more = [arg for subargs in more for arg in shlex.split(subargs)]
     args = {"junos": ["-Jz"], "iosxr": ["-X"], "ios": []}[targetos]
-    args += ["-h", irrd_server,
-             "-Al", name,
-             *more]
+    args += ["-h", irrd_server, "-Al", name, *more]
     with TimeIt("bgpq3 for {}".format(name)):
         result = subprocess.run(
             ["bgpq3", *args], check=True, capture_output=True, timeout=120
@@ -282,10 +289,10 @@ def bgpq3(targetos, cache, name, *more):
     now = datetime.now()
     tomorrow = datetime.now() + timedelta(days=1)
     midnight = datetime.combine(tomorrow, time(hour=1), now.tzinfo)
-    delta = midnight-now
+    delta = midnight - now
     if delta > timedelta(days=1):
         delta -= timedelta(days=1)
-    cache.set(cachekey, result, expire=(midnight-now).total_seconds())
+    cache.set(cachekey, result, expire=(midnight - now).total_seconds())
     return result
 
 
@@ -298,9 +305,9 @@ def peeringdb(cache, asn):
     if result is not None:
         return result
     try:
-        r = requests.get("https://www.peeringdb.com/api/net",
-                         params=dict(asn=asn),
-                         timeout=10)
+        r = requests.get(
+            "https://www.peeringdb.com/api/net", params=dict(asn=asn), timeout=10
+        )
         r.raise_for_status()
     except requests.RequestException as exc:
         result = cache.get(cachekey_long)
@@ -325,21 +332,15 @@ def recursion_detected(frame, keys):
     current = frame
     current_filename = current.f_code.co_filename
     current_function = current.f_code.co_name
-    current_locals = {k: v
-                      for k, v in current.f_locals.items()
-                      if k in keys}
+    current_locals = {k: v for k, v in current.f_locals.items() if k in keys}
     while frame.f_back:
         frame = frame.f_back
         fname = frame.f_code.co_filename
-        if not(fname.endswith(".py") or
-               fname == "<template>"):
+        if not (fname.endswith(".py") or fname == "<template>"):
             return False
-        if fname != current_filename or \
-           frame.f_code.co_name != current_function:
+        if fname != current_filename or frame.f_code.co_name != current_function:
             continue
-        if ({k: v
-             for k, v in frame.f_locals.items()
-             if k in keys} == current_locals):
+        if {k: v for k, v in frame.f_locals.items() if k in keys} == current_locals:
             return True
     return False
 
@@ -349,6 +350,7 @@ class ErrorExtension(Extension):
     """Extension providing {% error %} tag, allowing to raise errors
     directly from a Jinja template.
     """
+
     tags = frozenset(['error'])
 
     def parse(self, parser):
@@ -357,7 +359,11 @@ class ErrorExtension(Extension):
         message = parser.parse_expression()
         node = CallBlock(
             self.call_method('_raise', [message], lineno=lineno),
-            [], [], [], lineno=lineno)
+            [],
+            [],
+            [],
+            lineno=lineno,
+        )
         return node
 
     def _raise(self, message, caller):
@@ -381,6 +387,7 @@ class LruCacheIgnore(object):
     >>> fn(LruCacheIgnore(6))
     10
     """
+
     def __init__(self, obj):
         self._obj = obj
 
@@ -398,6 +405,7 @@ class JerikanUndefined(StrictUndefined):
     '''Custom StructUndefined class which returns further Undefined
     objects on access instead of throwing an exception.
     '''
+
     def __getattr__(self, name):
         return self
 
@@ -416,7 +424,7 @@ class TemplateRenderer(object):
                 lstrip_blocks=True,
                 keep_trailing_newline=True,
                 undefined=JerikanUndefined,
-                extensions=[ErrorExtension, "jinja2.ext.do"]
+                extensions=[ErrorExtension, "jinja2.ext.do"],
             )
 
             # Use some filters from Ansible
@@ -435,12 +443,11 @@ class TemplateRenderer(object):
 
             # Register custom global functions
             env.globals["bgpq3"] = contextfunction(
-                lambda ctx, *args: bgpq3(ctx.parent["os"],
-                                         LruCacheIgnore(cache),
-                                         *args))
+                lambda ctx, *args: bgpq3(ctx.parent["os"], LruCacheIgnore(cache), *args)
+            )
             env.globals["peeringdb"] = lambda *args: peeringdb(
-                                         LruCacheIgnore(cache),
-                                         *args)
+                LruCacheIgnore(cache), *args
+            )
             env.globals["scope"] = classifier.scope
             env.globals["lookup"] = self._lookup
             env.globals["devices"] = self._devices
@@ -495,12 +502,15 @@ class TemplateRenderer(object):
                 parent = name.split(".")[0]
                 return connectivity(acc, parent)
             elif name.startswith(("ae", "Bundle-Ether")):
-                parents = [pname
-                           for pname in interfaces
-                           if interfaces[pname].get("aggregate", None) == name]
+                parents = [
+                    pname
+                    for pname in interfaces
+                    if interfaces[pname].get("aggregate", None) == name
+                ]
                 return acc + functools.reduce(connectivity, parents, acc)
             else:
                 return acc
+
         speeds = connectivity([], name)
         if len(speeds) == 0:
             dspeed = "???"
@@ -521,11 +531,14 @@ class TemplateRenderer(object):
             for ppport, ppportinfos in ppinfos.get('ports', {}).items():
                 if not ppportinfos:
                     continue
-                if name == ppportinfos.get('port', None) and \
-                   ctx.parent['shorthost'] == ppportinfos.get('device', None):
-                    ppinfo = [pp,
-                              "port:{}".format(ppport),
-                              ppportinfos.get('reference', None)]
+                if name == ppportinfos.get('port', None) and ctx.parent[
+                    'shorthost'
+                ] == ppportinfos.get('device', None):
+                    ppinfo = [
+                        pp,
+                        "port:{}".format(ppport),
+                        ppportinfos.get('reference', None),
+                    ]
                     if ppinfo[2]:
                         ppinfo[2] = "ref:{}".format(ppinfo[2])
                     ppinfo = "{{{}}}".format(" ".join((i for i in ppinfo if i)))
@@ -546,10 +559,11 @@ class TemplateRenderer(object):
             if ctx.parent["environment"] == "prod":
                 location = ctx.parent["location"]
             else:
-                location = "{}.{}".format(ctx.parent["environment"],
-                                          ctx.parent["location"])
+                location = "{}.{}".format(
+                    ctx.parent["environment"], ctx.parent["location"]
+                )
             device = "{}.{}.blade-group.net".format(device, location)
-        if recursion_detected(inspect.currentframe(), {}):
+        if recursion_detected(inspect.current   frame(), {}):
             # When recursing, don't cache results
             return self._uncached_lookup(ctx, device, namespace, key)
         return self._cached_lookup(LruCacheIgnore(ctx), device, namespace, key)
@@ -565,8 +579,9 @@ class TemplateRenderer(object):
         result = self.jerakia.lookup(device, namespace, key)
 
         def render_template_jinja(something):
-            if recursion_detected(inspect.currentframe(),
-                                  {"something", "device", "namespace", "key"}):
+            if recursion_detected(
+                inspect.currentframe(), {"something", "device", "namespace", "key"}
+            ):
                 # When recursing, just give a bogus value
                 return Undefined(name="RecursionReached")
 
@@ -575,8 +590,7 @@ class TemplateRenderer(object):
             return template.render(device=device, **scope)
 
         def render_template_ip6_marker(previous):
-            base = self.jerakia.lookup(device,
-                                       "topology", "base-public-6")
+            base = self.jerakia.lookup(device, "topology", "base-public-6")
             if base.startswith("~"):
                 base = render_template_jinja(base[1:])
             return ipv4toipv6(ctx, previous, base)
@@ -584,24 +598,26 @@ class TemplateRenderer(object):
         # Render templates in all values
         def render_template(something, previous=None):
             if isinstance(something, dict):
-                return {render_template(key): render_template(value)
-                        for key, value
-                        in something.items()}
+                return {
+                    render_template(key): render_template(value)
+                    for key, value in something.items()
+                }
             if isinstance(something, str) and something.startswith("~"):
                 try:
                     if something == "~^ip6":
                         # An ~^ip6 marker means we translate the
                         # previous element of a list to an IPv6
                         # address using base-public-6.
-                        assert previous is not None, \
-                            "~^ip6 marker should not be first"
+                        assert previous is not None, "~^ip6 marker should not be first"
                         return render_template_ip6_marker(previous)
                     # Otherwise, this is a Jinja template.
                     return render_template_jinja(something[1:])
                 except Exception as exc:
                     raise RuntimeError(
                         "unable to render `{}' for {}: {}".format(
-                            something[1:], device, str(exc))) from exc
+                            something[1:], device, str(exc)
+                        )
+                    ) from exc
             if isinstance(something, (list, set, tuple)):
                 previous = None
                 result = []
@@ -636,9 +652,12 @@ class TemplateRenderer(object):
         for idx, arg in enumerate(fargs):
             if ":" in arg:
                 odevice, oport = arg.split(":", 1)
-                overrides = self.jerakia.lookup(
-                    f"{odevice}.{site}.blade-group.net",
-                    "bgp", "bgptth-override") or {}
+                overrides = (
+                    self.jerakia.lookup(
+                        f"{odevice}.{site}.blade-group.net", "bgp", "bgptth-override"
+                    )
+                    or {}
+                )
                 if oport in overrides:
                     fargs[idx] = f"{odevice}:{overrides[oport]}"
         # Invoke bgpassignment main function
@@ -653,9 +672,11 @@ class TemplateRenderer(object):
         if 'private' in result:
             previous = self._bgptth_results.get(result['private'], None)
             if previous is not None and previous != args:
-                raise RuntimeError(f"both `{' '.join(args)}' "
-                                   f"and `{' '.join(previous)}' "
-                                   f"collided to {result['private']}")
+                raise RuntimeError(
+                    f"both `{' '.join(args)}' "
+                    f"and `{' '.join(previous)}' "
+                    f"collided to {result['private']}"
+                )
             self._bgptth_results[result['private']] = args
         return result
 

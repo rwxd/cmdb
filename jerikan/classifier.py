@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class Classifier(object):
-
     def __init__(self, classifier):
         self.classifier = classifier
 
@@ -21,8 +20,7 @@ class Classifier(object):
             for regex in matcher:
                 mo = re.search(regex, device)
                 if mo:
-                    logger.debug("device {} match regex {}".format(device,
-                                                                   regex))
+                    logger.debug("device {} match regex {}".format(device, regex))
                     for k, v in matcher[regex].items():
                         if isinstance(v, str):
                             scope[k] = mo.expand(v)

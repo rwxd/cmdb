@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class Jerakia(object):
-
     def __init__(self, schema, datapath, classifier, searchpaths):
         self.classifier = classifier
         self.schema = schema

@@ -12,19 +12,23 @@ def searchpaths(scope):
         "host/{scope[host]}",
         "host/{scope[environment]}.{scope[location]}/{scope[shorthost]}",
         "host/{scope[location]}/{scope[shorthost]}",
-        *[f"groups/{group}{path}" for path in [
-            "-{scope[os]}-{scope[model]}-member{scope[member]}",
-            "-member{scope[member]}",
-            "-{scope[environment]}.{scope[location]}-pod{scope[pod]}",
-            "-{scope[location]}-pod{scope[pod]}",
-            "-{scope[environment]}.{scope[location]}-{scope[sublocation]}",
-            "-{scope[location]}-{scope[sublocation]}",
-            "-{scope[environment]}.{scope[location]}",
-            "-{scope[location]}",
-            "-{scope[continent]}",
-            "-{scope[os]}-{scope[model]}",
-            "",
-        ] for group in scope.get('groups', [])[::-1]],
+        *[
+            f"groups/{group}{path}"
+            for path in [
+                "-{scope[os]}-{scope[model]}-member{scope[member]}",
+                "-member{scope[member]}",
+                "-{scope[environment]}.{scope[location]}-pod{scope[pod]}",
+                "-{scope[location]}-pod{scope[pod]}",
+                "-{scope[environment]}.{scope[location]}-{scope[sublocation]}",
+                "-{scope[location]}-{scope[sublocation]}",
+                "-{scope[environment]}.{scope[location]}",
+                "-{scope[location]}",
+                "-{scope[continent]}",
+                "-{scope[os]}-{scope[model]}",
+                "",
+            ]
+            for group in scope.get('groups', [])[::-1]
+        ],
         "groups/{scope[environment]}.{scope[location]}-{scope[sublocation]}",
         "groups/{scope[location]}-{scope[sublocation]}",
         "groups/{scope[environment]}.{scope[location]}",
@@ -32,7 +36,7 @@ def searchpaths(scope):
         "os/{scope[os]}-{scope[model]}",
         "os/{scope[os]}-{scope[location]}",
         "os/{scope[os]}",
-        'common'
+        'common',
     ]
     for idx in range(len(paths)):
         try:

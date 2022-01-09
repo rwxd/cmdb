@@ -62,7 +62,9 @@ def parse_args(args=sys.argv[1:]):
     )
     g.add_argument("--devices", help="path to list of devices", default="devices.yaml")
     g.add_argument("--schema", help="path to schema file", default="schema.yaml")
-    g.add_argument("--searchpaths", help="path to searchpaths method", default="searchpaths.py")
+    g.add_argument(
+        "--searchpaths", help="path to searchpaths method", default="searchpaths.py"
+    )
     g.add_argument("--data", help="path to data directory", default="data")
 
     subparsers = parser.add_subparsers(title="commands", dest="command")
@@ -82,18 +84,17 @@ def parse_args(args=sys.argv[1:]):
     build.add_argument(
         "--templates", default="templates", help="directory containing templates"
     )
-    build.add_argument("--output", default="output",
-                       help="output directory")
-    build.add_argument("--cache-directory", default=".cache~",
-                       help="cache directory between runs")
-    build.add_argument("--cache-size", default="100",
-                       type=int,
-                       help="cache maximum size (in MiB)")
-    build.add_argument("--skip-checks", default=False,
-                       action="store_true",
-                       help="skip checks")
-    build.add_argument("--diff",
-                       help="diff the generated configuration")
+    build.add_argument("--output", default="output", help="output directory")
+    build.add_argument(
+        "--cache-directory", default=".cache~", help="cache directory between runs"
+    )
+    build.add_argument(
+        "--cache-size", default="100", type=int, help="cache maximum size (in MiB)"
+    )
+    build.add_argument(
+        "--skip-checks", default=False, action="store_true", help="skip checks"
+    )
+    build.add_argument("--diff", help="diff the generated configuration")
 
     return parser.parse_args(args)
 
@@ -101,7 +102,7 @@ def parse_args(args=sys.argv[1:]):
 def setup_logging(options):
     """Configure logging."""
     root = logging.getLogger("")
-    root.setLevel(logging.WARNING)
+    root.setLevel(logging.DEBUG)
     logger.setLevel(options.debug and logging.DEBUG or logging.INFO)
     if not options.silent:
         ch = logging.StreamHandler()
@@ -123,18 +124,20 @@ def do_scope(options, classifier, jerakia, devices):
 
 
 def do_lookup(options, classifier, jerakia, devices):
-    renderer = TemplateRenderer(basepath="",
-                                classifier=classifier,
-                                jerakia=jerakia,
-                                devices=devices)
+    renderer = TemplateRenderer(
+        basepath="", classifier=classifier, jerakia=jerakia, devices=devices
+    )
     scope = classifier.scope(options.device)
     result = renderer._lookup(
-        new_context(renderer.env,
-                    "internal lookup",
-                    {},
-                    vars=dict(device=options.device, **scope)),
+        new_context(
+            renderer.env,
+            "internal lookup",
+            {},
+            vars=dict(device=options.device, **scope),
+        ),
         options.namespace,
-        options.key)
+        options.key,
+    )
     if result is not None:
         print(yaml.dump(result, sort_keys=False))
 
@@ -142,16 +145,12 @@ def do_lookup(options, classifier, jerakia, devices):
 def do_build(options, classifier, jerakia, devices):
     # Linting
     logger.debug("YAML lint data directory (and ansible/)")
-    subprocess.check_call(["yamllint",
-                           ".yamllint",
-                           "ansible",
-                           options.data])
+    subprocess.check_call(["yamllint", ".yamllint", "ansible", options.data])
 
     # Building
     limits = options.limit.split(",")
     targets = []
-    cache = Cache(options.cache_directory,
-                  size_limit=options.cache_size*1024*1024)
+    cache = Cache(options.cache_directory, size_limit=options.cache_size * 1024 * 1024)
     for device in devices:
         groups = classifier.scope(device).get("groups", [])
         for limit in limits:
@@ -164,18 +163,24 @@ def do_build(options, classifier, jerakia, devices):
 
         else:
             logger.debug("skip {}, not matching limits".format(device))
-    ret = pytest.main(["-p", "no:cacheprovider"],
-                      [PytestPlugin(templates=options.templates,
-                                    output=options.output,
-                                    skip_checks=options.skip_checks,
-                                    diff=options.diff,
-                                    cache=cache,
-                                    classifier=classifier,
-                                    jerakia=jerakia,
-                                    devices=devices,
-                                    targets=targets,
-                                    debug=options.debug,
-                                    silent=options.silent)])
+    ret = pytest.main(
+        ["-p", "no:cacheprovider"],
+        [
+            PytestPlugin(
+                templates=options.templates,
+                output=options.output,
+                skip_checks=options.skip_checks,
+                diff=options.diff,
+                cache=cache,
+                classifier=classifier,
+                jerakia=jerakia,
+                devices=devices,
+                targets=targets,
+                debug=options.debug,
+                silent=options.silent,
+            )
+        ],
+    )
     if ret != 0:
         sys.exit(1)
 
@@ -186,10 +191,12 @@ if __name__ == "__main__":
 
     try:
         classifier = Classifier(yaml.safe_load(open(options.classifier)))
-        jerakia = Jerakia(yaml.safe_load(open(options.schema)),
-                          options.data,
-                          classifier,
-                          options.searchpaths)
+        jerakia = Jerakia(
+            yaml.safe_load(open(options.schema)),
+            options.data,
+            classifier,
+            options.searchpaths,
+        )
         devices = yaml.safe_load(open(options.devices))["devices"]
 
         cmd = "do_{}".format(options.command)
